@@ -9,17 +9,23 @@ import org.springframework.data.repository.core.RepositoryCreationException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
+    private final BCryptPasswordEncoder encoder;
 
     public User register(RegisterRequest request){
+        String senhaCriptografada = encoder.encode(request.getPassword());
+
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
-                .password(request.getPassword())
+                .password(senhaCriptografada)
                 .build();
         return userRepository.save(user);
     }
@@ -28,7 +34,7 @@ public class UserService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
 
-        if (!user.getPassword().equals(request.getPassword())){
+        if (!encoder.matches(request.getPassword(), user.getPassword())){
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Senha incorreta");
         }
 
